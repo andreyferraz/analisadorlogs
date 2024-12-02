@@ -27,29 +27,57 @@ public class LogController {
     private LogProcessorService logProcessorService;
 
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadLogFile(@RequestParam("file") MultipartFile file){
-        try{
+    public ResponseEntity<?> uploadLogFile(@RequestParam("file") MultipartFile file) {
+        try {
             List<LogEntry> logs = logProcessorService.parseLogFile(file.getInputStream());
             return ResponseEntity.ok(logs);
-        }catch(IOException e){
+        } catch (IOException e) {
             return ResponseEntity.badRequest().body("Erro ao processar arquivo: " + e.getMessage());
         }
     }
 
     @GetMapping("/report")
-    public ResponseEntity<byte[]> generateCSVReport(@RequestParam("level") String level){
-        try{
+    public ResponseEntity<byte[]> generateCSVReport(@RequestParam("level") String level) {
+        try {
             List<LogEntry> logs = logProcessorService.filterLogsByLevel(logProcessorService.getAllLogs(), level);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             logProcessorService.generateCSVReport(logs, outputStream);
 
             return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\\\"report.csv\\\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(outputStream.toByteArray());
-        }catch(IOException e){
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\\\"report.csv\\\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(outputStream.toByteArray());
+        } catch (IOException e) {
             return ResponseEntity.internalServerError().body(null);
         }
+    }
+
+    @GetMapping("/metrics")
+    public ResponseEntity<List<LogEntry>> getMetrics(@RequestParam(value = "level", required = false) String level) {
+        List<LogEntry> logs = logProcessorService.getAllLogs();
+        if (level != null) {
+            logs = logProcessorService.filterLogsByLevel(logs, level);
+        }
+        return ResponseEntity.ok(logs);
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadAndProcessLogs(@RequestParam("file") MultipartFile file) {
+        try {
+            List<LogEntry> logs = logProcessorService.parseLogFile(file.getInputStream());
+            return ResponseEntity.ok("Logs processados com sucesso! Total: " + logs.size());
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body("Erro ao processar arquivo: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<List<LogEntry>> filterLogs(@RequestParam(value = "level", required = false) String level) {
+        List<LogEntry> logs = logProcessorService.getAllLogs();
+        if (level != null) {
+            logs = logProcessorService.filterLogsByLevel(logs, level);
+        }
+        return ResponseEntity.ok(logs);
     }
 
 }

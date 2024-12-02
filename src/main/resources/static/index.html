@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Logs</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Analisador de Logs</h1>
+    <div id="controls">
+        <form id="uploadForm">
+            <input type="file" id="logFile" accept=".txt" required>
+            <button type="submit">Upload Logs</button>
+        </form>
+        <select id="filterLevel">
+            <option value="">Todos os Níveis</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+        </select>
+        <button id="applyFilter">Aplicar Filtro</button>
+    </div>
+    <canvas id="logChart" width="400" height="200"></canvas>
+
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const logFileInput = document.getElementById('logFile');
+        const filterLevelSelect = document.getElementById('filterLevel');
+        const applyFilterButton = document.getElementById('applyFilter');
+        const logChart = document.getElementById('logChart');
+
+        async function fetchLogs(level = '') {
+            const response = await fetch(`/logs/filter?level=${level}`);
+            return await response.json();
+        }
+
+        function prepareChartData(logs) {
+            const levels = logs.map(log => log.level);
+            const counts = levels.reduce((acc, level) => {
+                acc[level] = (acc[level] || 0) + 1;
+                return acc;
+            }, {});
+
+            return {
+                labels: Object.keys(counts),
+                data: Object.values(counts),
+            };
+        }
+
+        async function renderChart(level = '') {
+            const logs = await fetchLogs(level);
+            const chartData = prepareChartData(logs);
+
+            new Chart(logChart, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Quantidade de Logs',
+                        data: chartData.data,
+                        backgroundColor: ['#4CAF50', '#FFC107', '#F44336'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append('file', logFileInput.files[0]);
+
+            const response = await fetch('/logs/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const message = await response.text();
+            alert(message);
+
+            await renderChart(); // Atualiza o gráfico com novos dados
+        });
+
+        applyFilterButton.addEventListener('click', async () => {
+            const selectedLevel = filterLevelSelect.value;
+            await renderChart(selectedLevel);
+        });
+
+        // Inicializa o gráfico
+        renderChart();
+    </script>
+</body>
+</html>
