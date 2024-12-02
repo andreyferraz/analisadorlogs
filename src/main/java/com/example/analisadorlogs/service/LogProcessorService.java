@@ -19,6 +19,8 @@ import com.example.analisadorlogs.model.LogEntry;
 @Service
 public class LogProcessorService {
 
+    private final List<LogEntry> logStorage = new ArrayList<>();
+
     public List<LogEntry> parseLogFile(InputStream inputStream) throws IOException {
         List<LogEntry> logs = new ArrayList<>();
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))){
@@ -31,7 +33,12 @@ public class LogProcessorService {
                 }
             }
         }
+        logStorage.addAll(logs);
         return logs;
+    }
+
+    public List<LogEntry> getAllLogs() {
+        return new ArrayList<>(logStorage); // Retorna uma cópia da lista de logs armazenados
     }
 
     public List<LogEntry> filterLogsByLevel(List<LogEntry> logs, String level){
